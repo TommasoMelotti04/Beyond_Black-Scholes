@@ -1,0 +1,111 @@
+---
+title: "R Notebook"
+output:
+      html_notebook: default
+      pdf_document: default
+      htm_document:
+        df_print: paged
+---
+
+
+
+
+
+
+```{r}
+library(quantmod)
+library(evir)
+```
+-----
+```{r}
+getSymbols("^GSPC", from="1927-01-01", to="2024-12-31", src="yahoo")
+stock=Ad(GSPC) # stock values
+returns_pct <- dailyReturn(Cl(GSPC), type = "arithmetic") 
+neg_abs_returns=-returns_pct
+chartSeries(stock, up.col="red", theme="white") # plot the time series of stock
+stock.loss=-diff(log(Ad(GSPC))) #log-losses, (with losses as positive quantities)
+chartSeries(stock.loss, up.col='red', theme='white') # plot the series of log returns
+n = sum(!is.na(stock.loss)) # number of observation 
+head(neg_abs_returns)
+head(stock.loss)
+```
+```{r}
+VaR95=quantile(stock.loss,0.95,na.rm=T)
+VaR95
+VaR99=quantile(stock.loss, 0.99, na.rm=T)
+VaR99
+VaR999=quantile(stock.loss, 0.999, na.rm=T)
+VaR999
+VaR9999=quantile(stock.loss, 0.9999, na.rm=T)
+VaR9999
+```
+This means that negative changes in value of more than 1.6% happend 5% of the time, while negative changes of more than 3.4% happend 1% of the time. We can go further and see that actually the probability on losses is low but non zero.
+
+```{r}
+summary(returns, na.rm=T)
+std=sd(returns, na.rm=T )
+std*100
+```
+```{r}
+
+lossreturnsSP500=diff(log(stock))
+lossesSP500=-lossreturnsSP500[lossreturnsSP500<0] # Change the sign! take the negative returns as losses and turn them positive
+returnsSP500=lossreturnsSP500[lossreturnsSP500>0] # positive returns 
+```
+
+```{r}
+hist(lossesSP500,col=2)
+qplot(lossesSP500,0)
+summary(lossesSP500)
+sd(lossesSP500)
+```
+
+```{r}
+emplot(lossesSP500, 'xy')
+```
+```{r}
+meplot(lossesSP500)
+```
+
+```{r}
+MSplot <- function(data,p=4) {
+  par(mfrow = c(2, 2)) 
+  x=abs(data)
+  for (i in 1:p) {
+    y=x^i
+    S=cumsum(y)
+    M=cummax(y)
+    R=M/S
+    plot(1:length(x),R,type='l', col=2, lwd=3, ylim=c(0,1),xlab='n', ylab='Rn', 
+         main=paste("MSplot for p=",i))
+  }
+  par(mfrow = c(1, 1)) 
+ # return(R)
+}
+```
+
+```{r}
+MSplot(lossesSP500)
+```
+
+```{r}
+library(ineq)
+sort_lossesSP500 = sort(lossesSP500) # We sort the data
+n=length(lossesSP500)
+CP = c() # empty array for storage
+for (i in 1:n) {
+  CP[i] = ineq(sort_lossesSP500[i:n],type='Gini') # truncated Gini
+}
+plot(1:n,CP,ylim=c(0,1))
+```
+
+```{r}
+hill(lossesSP500)
+```
+```{r}
+
+emplot(neg_abs_returns, 'xy')
+neg_abs_returns_threshold<-neg_abs_returns[neg_abs_returns>0.01]
+emplot(neg_abs_returns_threshold, 'xy')
+```
+
